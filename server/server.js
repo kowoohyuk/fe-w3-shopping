@@ -1,14 +1,15 @@
 const app = require("express")();
 const port = 3000;
 const resFile = require('./response.json');
-const { best, event, carousel, box } = resFile;
+const { keyword, best, event, carousel, box } = resFile;
+
+// app.use(express.static('server'));
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, X-Requested-With");
   next();
 });
-
 app.get('/item', (req, res) => {
   const { query : { type, page, count } } = req;
   res.status(200);
@@ -43,6 +44,12 @@ app.get('/length', (req, res) => {
   res.json({
     length : box.list.length
   });
+  res.end();
+});
+
+app.get('/keyword', (req, res) => {
+  res.status(200);
+  res.json(keyword);
   res.end();
 });
 

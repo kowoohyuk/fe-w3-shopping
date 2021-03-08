@@ -1,5 +1,4 @@
 const api = require('./api');
-const searchButton = document.getElementById('searchButton');
 const moreBoxButton = document.getElementById('moreBoxButton');
 const viewBoxCount = document.getElementById('viewBoxCount');
 const totalBoxCount = document.getElementById('totalBoxCount');
@@ -12,63 +11,93 @@ const eventItemTarget = document.getElementById('eventItemTarget');
 const themePagingArrow = document.getElementById('themePagingArrow');
 const themeTarget = document.getElementById('themeTarget');
 const numberWithCommas = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const rollKeywordTarget = document.getElementById('rollKeywordTarget');
 
 const init = () => {
-  let moreBoxNowPage = 1;
-  let moreBoxRowNumber = 5;
+  
+  ////////////// Best
+  const getBest = async () => {
+    const data = await api.getItem('best');
+    if(data) renderBest(data);
+  };
+  const renderBest = ({prefix, list}) => bestItemTarget.innerHTML = `<a class="carousel__item"><img src="${prefix}${list[0].src}"></a>`;
 
-  const getBoxLength = async () => {
-    const data = await api.getBoxItemLength();
-    if(data && !data.error) {
-      if(data.length) {
-        setTotalBoxCount(data.length);
+  const moveCarousel = (target, transition = true) => {
+    if(target.dataset.arrow === 'prev') {
+      if(transition) {
+        panel.classList.add('transition-on', 'move-prev');
       }
-    } else {
-      console.log(data.error || '서버와 연결이 끊겼어요.');
+      setTimeout(() => {
+        const list = panel.querySelectorAll('.panel__item');
+        panel.insertBefore(list[list.length - 1], list[0]);
+        pagingHover.insertBefore(pagingHover.firstElementChild, null);
+        panel.classList.remove('transition-on', 'move-prev');
+      }, 300);
+    }
+    if(target.dataset.arrow === 'next') {
+      if(transition) {
+        panel.classList.add('transition-on', 'move-next');
+      }
+      setTimeout(() => {
+        const list = panel.querySelectorAll('.panel__item');
+        panel.insertBefore(list[0], null);
+        pagingHover.insertBefore(pagingHover.lastElementChild, pagingHover.firstElementChild);
+        panel.classList.remove('transition-on', 'move-next');
+      }, 300);
     }
   }
 
+  pagingHover.addEventListener('click', ({ target }) => {
+    if(!target.classList.contains('active')) {
+      const list = pagingHover.querySelectorAll('div');
+      let activeIndex = 0;
+      let targetIndex = 0;
+      for(let i = 0; i < list.length; i++) {
+        if(list[i].classList.contains('active')) {
+          activeIndex = i;
+        }
+        if(list[i] === target) {
+          targetIndex = i;
+        }
+      }
+      let sum = activeIndex - targetIndex;
+      let str = 'prev';
+      if(sum < 0) {
+        str = 'next';
+        sum *= -1;
+      }
+      while(sum-- > 0) {
+        if(str === 'prev') {
+          const list = panel.querySelectorAll('.panel__item');
+          panel.insertBefore(list[list.length - 1], list[0]);
+          pagingHover.insertBefore(pagingHover.firstElementChild, null);
+        } else {
+          const list = panel.querySelectorAll('.panel__item');
+          panel.insertBefore(list[0], null);
+          pagingHover.insertBefore(pagingHover.lastElementChild, pagingHover.firstElementChild);
+        }
+      }
+    }
+  });
+
+  ////////////// Box
+  let moreBoxNowPage = 1;
+  let moreBoxRowNumber = 5;
   const getBox = async () => {
     const data = await api.getItem('box', moreBoxNowPage, moreBoxRowNumber);
-    if(data && !data.error) {
+    if(data) {
       moreBoxNowPage += 1;
-      if(data.list) {
-        setviewBoxCount(data.list.length);
-      }
+      setviewBoxCount(data.list.length);
       renderBox(data);
-    } else {
-      console.log(data.error || '서버와 연결이 끊겼어요.');
     }
     checkMoreButton();
   }
 
-  const getTheme = async () => {
-    const data = await api.getItem('carousel');
-    if(data && !data.error) {
-      renderTheme(data);
-    } else {
-      console.log(data.error || '서버와 연결이 끊겼어요.');
-    }
+  const getBoxLength = async () => {
+    const data = await api.getBoxItemLength();
+    if(data) setTotalBoxCount(data.length);
   }
 
-  const getBest = async () => {
-    const data = await api.getItem('best');
-    if(data && !data.error) {
-      renderBest(data);
-    } else {
-      console.log(data.error || '서버와 연결이 끊겼어요.');
-    }
-  };
-
-  const getEvent = async () => {
-    const data = await api.getItem('event');
-    if(data && !data.error) {
-      renderEvent(data);
-    } else {
-      console.log(data.error || '서버와 연결이 끊겼어요.');
-    }
-  };
-  
   const setTotalBoxCount = length => {
     if(length)
       totalBoxCount.textContent = length;
@@ -80,6 +109,7 @@ const init = () => {
   }
 
   const renderBox = ({prefix, list}) => {
+    /*html*/
     str = list.reduce((acc, cur) => 
       acc += `
       <a class="box__item" href="">
@@ -92,17 +122,19 @@ const init = () => {
     boxTarget.insertAdjacentHTML('beforeend', str);
   }
 
-  const renderBest = ({prefix, list}) => {
-    str = `<a class="carousel__item"><img src="${prefix}${list[0].src}"></a>`;
-    bestItemTarget.innerHTML = str;
+  const checkMoreButton = () => {
+    if(+viewBoxCount.textContent >= +totalBoxCount.textContent) {
+      moreBoxButton.classList.add('not-used');
+    }
   }
 
-  const renderEvent = ({prefix, list}) => {
-    str = list.reduce((acc, cur) => acc += `<a class="panel__item"><img src="${prefix}${cur.src}"></a>`, '');
-    eventItemTarget.innerHTML = str;
+  ////////////// Theme carousel
+  const getTheme = async () => {
+    const data = await api.getItem('carousel');
+    if(data) renderTheme(data);
   }
-
   const renderTheme = ({prefix, list}) => {
+    /*html*/
     str = list.reduce((acc, cur) => {
       acc += `
       <a class="box__item" href="">
@@ -122,32 +154,21 @@ const init = () => {
       themeTarget.style.transform = `translateX(${themeTarget.dataset.default_width}px)`;
     }, 500);
   }
-  
-  const checkMoreButton = () => {
-    if(+viewBoxCount.textContent >= +totalBoxCount.textContent) {
-      moreBoxButton.classList.add('not-used');
-    }
+
+  const getKeyword = async () => {
+    const data = await api.getKeyword();
+    if(data) renderRoll(data);
   }
-  
-  const moveCarousel = target => {
-    if(target.dataset.arrow === 'prev') {
-      panel.classList.add('transition-on', 'move-prev');
-      setTimeout(() => {
-        const list = panel.querySelectorAll('.panel__item');
-        panel.insertBefore(list[list.length - 1], list[0]);
-        pagingHover.insertBefore(pagingHover.firstElementChild, null);
-        panel.classList.remove('transition-on', 'move-prev');
-      }, 300);
-    }
-    if(target.dataset.arrow === 'next') {
-      panel.classList.add('transition-on', 'move-next');
-      setTimeout(() => {
-        const list = panel.querySelectorAll('.panel__item');
-        panel.insertBefore(list[0], null);
-        pagingHover.insertBefore(pagingHover.lastElementChild, pagingHover.firstElementChild);
-        panel.classList.remove('transition-on', 'move-next');
-      }, 300);
-    }
+
+  const getEvent = async () => {
+    const data = await api.getItem('event');
+    if(data) renderEvent(data);
+  };
+
+  const renderEvent = ({prefix, list}) => {
+    str = list.reduce((acc, cur) => acc += `<a class="panel__item"><img src="${prefix}${cur.src}"></a>`, '');
+    eventItemTarget.innerHTML = str;
+    eventItemTarget.insertBefore(eventItemTarget.lastElementChild, eventItemTarget.firstElementChild);
   }
 
   const handleThemeCarousel = (target, count = 1) => moveThemeCarousel(target.dataset.arrow, count);
@@ -193,6 +214,24 @@ const init = () => {
     delete target.dataset.moved;
     clearInterval(themePagingInterval);
   });
+  let rollKeyword = null;
+  const renderRoll = list => {
+    const str = list.reduce((acc, cur, i) => acc += `<li><span class="keyword__rank">${i + 1}</span><span>${cur}</span></li>`, '');
+    rollKeywordTarget.innerHTML = str;
+    rollKeywordTarget.dataset.height = rollKeywordTarget.firstElementChild.getBoundingClientRect().height;
+    rollKeyword = setInterval(() => keywordRoll(rollKeywordTarget), 1500);
+  }
+  const keywordRoll = target => {
+    target.classList.add('transition-on');
+    target.style.transform = `translateY(${-target.dataset.height}px)`;
+    setTimeout(() => {
+      target.classList.remove('transition-on');
+      target.insertBefore(target.firstElementChild, null);
+      target.style.transform = `translateY(0px)`;
+    }, 300);
+  };
+
+  getKeyword();
   getBoxLength();
   getBox();
   getBest();
@@ -201,3 +240,4 @@ const init = () => {
 }
 
 init();
+
